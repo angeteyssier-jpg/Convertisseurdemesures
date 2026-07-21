@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur Universel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .converter-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        select:focus, input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        /* Nouveau style pour l'indicateur de région */
+        .region-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            font-weight: normal;
+            vertical-align: middle;
+        }
+        .badge-si { background-color: #e3f2fd; color: #1565c0; } /* Bleu pour SI */
+        .badge-us { background-color: #fff3e0; color: #ef6c00; } /* Orange pour US/UK */
+        .badge-mar { background-color: #e0f2f1; color: #00695c; } /* Vert pour Maritime */
+        .badge-sci { background-color: #f3e5f5; color: #7b1fa2; } /* Violet pour Scientifique */
+
+        .unit-info {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+            min-height: 1.2em; /* Évite le saut de ligne quand vide */
+            font-style: italic;
+        }
+
+        .result-box {
+            background-color: #e9ecef;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 1.5rem;
+            border: 1px solid #dee2e6;
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+            margin-top: 0.5rem;
+            word-break: break-all;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .category-tabs {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #eee;
+            overflow-x: auto;
+            gap: 5px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .category-tabs::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .tab-btn:hover {
+            color: #0056b3;
+            background-color: #f8f9fa;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .tab-btn.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            font-weight: bold;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section.active {
+            display: block;
+        }
+        
+        .note {
+            font-size: 0.8rem;
+            color: #777;
+            margin-top: 8px;
+            font-style: italic;
+            line-height: 1.4;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="converter-card">
+    <h2>Convertisseur Universel</h2>
+
+    <!-- Onglets -->
+    <div class="category-tabs">
+        <button class="tab-btn active" onclick="switchCategory('time')">Temps</button>
+        <button class="tab-btn" onclick="switchCategory('length')">Longueur</button>
+        <button class="tab-btn" onclick="switchCategory('weight')">Poids</button>
+        <button class="tab-btn" onclick="switchCategory('speed')">Vitesse</button>
+        <button class="tab-btn" onclick="switchCategory('area')">Surface</button>
+        <button class="tab-btn" onclick="switchCategory('volume')">Volume</button>
+        <button class="tab-btn" onclick="switchCategory('sound')">Son</button>
+    </div>
+
+    <!-- Section Temps -->
+    <div id="time-section" class="section active">
+        <div class="form-group">
+            <label for="time-input">Valeur :</label>
+            <input type="number" id="time-input" placeholder="Ex: 120" oninput="convert('time')">
+        </div>
+        <div class="form-group">
+            <label for="time-from">De : <span id="badge-time-from" class="region-badge badge-si">Universel</span></label>
+            <select id="time-from" onchange="updateInfo('time', 'from'); convert('time')">
+                <option value="ms">Millisecondes</option>
+                <option value="s">Secondes</option>
+                <option value="min">Minutes</option>
+                <option value="h">Heures</option>
+                <option value="d">Jours</option>
+                <option value="w">Semaines</option>
+                <option value="mo">Mois (moyen)</option>
+                <option value="y">Années</option>
+            </select>
+            <div id="info-time-from" class="unit-info"></div>
+        </div>
+        <div class="form-group">
+            <label for="time-to">Vers : <span id="badge-time-to" class="region-badge badge-si">Universel</span></label>
+            <select id="time-to" onchange="updateInfo('time', 'to'); convert('time')">
+                <option value="y">Années</option>
+                <option value="mo">Mois (moyen)</option>
+                <option value="w">Semaines</option>
+                <option value="d">Jours</option>
+                <option value="h">Heures</option>
+                <option value="min">Minutes</option>
+                <option value="s" selected>Secondes</option>
+                <option value="ms">Millisecondes</option>
+            </select>
+            <div id="info-time-to" class="unit-info"></div>
+        </div>
+    </div>
+
+    <!-- Section Longueur -->
+    <div id="length-section" class="section">
+        <div class="form-group">
+            <label for="length-input">Valeur :</label>
+            <input type="number" id="length-input" placeholder="Ex: 100" oninput="convert('length')">
+        </div>
+        <div class="form-group">
+            <label for="length-from">De : <span id="badge-length-from" class="region-badge badge-si">SI</span></label>
+            <select id="length-from" onchange="updateInfo('length', 'from'); convert('length')">
+                <option value="km">Kilomètres (km)</option>
+                <option value="m" selected>Mètres (m)</option>
+                <option value="dm">Décimètres (dm)</option>
+                <option value="cm">Centimètres (cm)</option>
+                <option value="mm">Millimètres (mm)</option>
+                <option value="mi">Miles (mi)</option>
+                <option value="yd">Yards (yd)</option>
+                <option value="ft">Pieds (ft)</option>
+                <option value="in">Pouces (in)</option>
+                <option value="nmi">Milles marins</option>
+            </select>
+            <div id="info-length-from" class="unit-info">Unité de base du système international.</div>
+        </div>
+        <div class="form-group">
+            <label for="length-to">Vers : <span id="badge-length-to" class="region-badge badge-si">SI</span></label>
+            <select id="length-to" onchange="updateInfo('length', 'to'); convert('length')">
+                <option value="km">Kilomètres (km)</option>
+                <option value="m">Mètres (m)</option>
+                <option value="dm">Décimètres (dm)</option>
+                <option value="cm">Centimètres (cm)</option>
+                <option value="mm">Millimètres (mm)</option>
+                <option value="mi">Miles (mi)</option>
+                <option value="yd">Yards (yd)</option>
+                <option value="ft">Pieds (ft)</option>
+                <option value="in">Pouces (in)</option>
+                <option value="nmi">Milles marins</option>
+            </select>
+            <div id="info-length-to" class="unit-info"></div>
+        </div>
+    </div>
+
+    <!-- Section Poids -->
+    <div id="weight-section" class="section">
+        <div class="form-group">
+            <label for="weight-input">Valeur :</label>
+            <input type="number" id="weight-input" placeholder="Ex: 50" oninput="convert('weight')">
+        </div>
+        <div class="form-group">
+            <label for="weight-from">De : <span id="badge-weight-from" class="region-badge badge-si">SI</span></label>
+            <select id="weight-from" onchange="updateInfo('weight', 'from'); convert('weight')">
+                <option value="t">Tonnes (t)</option>
+                <option value="kg">Kilogrammes (kg)</option>
+                <option value="g">Grammes (g)</option>
+                <option value="mg">Milligrammes (mg)</option>
+                <option value="lb">Livres (lb)</option>
+                <option value="oz">Onces (oz)</option>
+                <option value="st">Stone (st)</option>
+            </select>
+            <div id="info-weight-from" class="unit-info"></div>
+        </div>
+        <div class="form-group">
+            <label for="weight-to">Vers : <span id="badge-weight-to" class="region-badge badge-si">SI</span></label>
+            <select id="weight-to" onchange="updateInfo('weight', 'to'); convert('weight')">
+                <option value="t">Tonnes (t)</option>
+                <option value="kg">Kilogrammes (kg)</option>
+                <option value="g">Grammes (g)</option>
+                <option value="mg">Milligrammes (mg)</option>
+                <option value="lb">Livres (lb)</option>
+                <option value="oz">Onces (oz)</option>
+                <option value="st">Stone (st)</option>
+            </select>
+            <div id="info-weight-to" class="unit-info"></div>
+        </div>
+    </div>
+
+    <!-- Section Vitesse -->
+    <div id="speed-section" class="section">
+        <div class="form-group">
+            <label for="speed-input">Valeur :</label>
+            <input type="number" id="speed-input" placeholder="Ex: 90" oninput="convert('speed')">
+        </div>
+        <div class="form-group">
+            <label for="speed-from">De : <span id="badge-speed-from" class="region-badge badge-si">SI</span></label>
+            <select id="speed-from" onchange="updateInfo('speed', 'from'); convert('speed')">
+                <option value="kmh">Kilomètres/heure (km/h)</option>
+                <option value="ms">Mètres/seconde (m/s)</option>
+                <option value="mph">Miles/heure (mph)</option>
+                <option value="kn">Nœuds (kn)</option>
+                <option value="fps">Pieds/seconde (ft/s)</option>
+            </select>
+            <div id="info-speed-from" class="unit-info"></div>
+        </div>
+        <div class="form-group">
+            <label for="speed-to">Vers : <span id="badge-speed-to" class="region-badge badge-si">SI</span></label>
+            <select id="speed-to" onchange="updateInfo('speed', 'to'); convert('speed')">
+                <option value="kmh">Kilomètres/heure (km/h)</option>
+                <option value="ms" selected>Mètres/seconde (m/s)</option>
+                <option value="mph">Miles/heure (mph)</option>
+                <option value="kn">Nœuds (kn)</option>
+                <option value="fps">Pieds/seconde (ft/s)</option>
+            </select>
+            <div id="info-speed-to" class="unit-info"></div>
+        </div>
+        <div class="note">1 m/s = 3.6 km/h.</div>
+    </div>
+
+    <!-- Section Surface -->
+    <div id="area-section" class="section">
+        <div class="form-group">
+            <label for="area-input">Valeur :</label>
+            <input type="number" id="area-input" placeholder="Ex: 1" oninput="convert('area')">
+        </div>
+        <div class="form-group">
+            <label for="area-from">De : <span id="badge-area-from" class="region-badge badge-si">SI</span></label>
+            <select id="area-from" onchange="updateInfo('area', 'from'); convert('area')">
+                <option value="km2">Kilomètres carrés (km²)</option>
+                <option value="ha">Hectares (ha)</option>
+                <option value="m2" selected>Mètres carrés (m²)</option>
+                <option value="dm2">Décimètres carrés (dm²)</option>
+                <option value="cm2">Centimètres carrés (cm²)</option>
+                <option value="mm2">Millimètres carrés (mm²)</option>
+                <option value="ac">Acres (ac)</option>
+                <option value="sqmi">Miles carrés (sq mi)</option>
+                <option value="sqyd">Yards carrés (sq yd)</option>
+                <option value="sqft">Pieds carrés (sq ft)</option>
+                <option value="sqin">Pouces carrés (sq in)</option>
+            </select>
+            <div id="info-area-from" class="unit-info"></div>
+        </div>
+        <div class="form-group">
+            <label for="area-to">Vers : <span id="badge-area-to" class="region-badge badge-si">SI</span></label>
+            <select id="area-to" onchange="updateInfo('area', 'to'); convert('area')">
+                <option value="km2">Kilomètres carrés (km²)</option>
+                <option value="ha">Hectares (ha)</option>
+                <option value="m2">Mètres carrés (m²)</option>
+                <option value="dm2">Décimètres carrés (dm²)</option>
+                <option value="cm2">Centimètres carrés (cm²)</option>
+                <option value="mm2">Millimètres carrés (mm²)</option>
+                <option value="ac">Acres (ac)</option>
+                <option value="sqmi">Miles carrés (sq mi)</option>
+                <option value="sqyd">Yards carrés (sq yd)</option>
+                <option value="sqft">Pieds carrés (sq ft)</option>
+                <option value="sqin">Pouces carrés (sq in)</option>
+            </select>
+            <div id="info-area-to" class="unit-info"></div>
+        </div>
+    </div>
+
+    <!-- Section Volume -->
+    <div id="volume-section" class="section">
+        <div class="form-group">
+            <label for="volume-input">Valeur :</label>
+            <input type="number" id="volume-input" placeholder="Ex: 10" oninput="convert('volume')">
+        </div>
+        <div class="form-group">
+            <label for="volume-from">De : <span id="badge-volume-from" class="region-badge badge-si">SI</span></label>
+            <select id="volume-from" onchange="updateInfo('volume', 'from'); convert('volume')">
+                <option value="m3">Mètres cubes (m³)</option>
+                <option value="l" selected>Litres (l)</option>
+                <option value="ml">Millilitres (ml)</option>
+                <option value="cl">Centilitres (cl)</option>
+                <option value="gal_us">Gallons US (liq)</option>
+                <option value="gal_uk">Gallons UK (imp)</option>
+                <option value="pt_us">Pintes US (liq)</option>
+                <option value="pt_uk">Pintes UK (imp)</option>
+                <option value="cup_us">Tasses US (cup)</option>
+                <option value="fl_oz_us">Onces liquides US</option>
+                <option value="fl_oz_uk">Onces liquides UK</option>
+                <option value="cu_ft">Pieds cubes (cu ft)</option>
+                <option value="cu_in">Pouces cubes (cu in)</option>
+            </select>
+            <div id="info-volume-from" class="unit-info"></div>
+        </div>
+        <div class="form-group">
+            <label for="volume-to">Vers : <span id="badge-volume-to" class="region-badge badge-si">SI</span></label>
+            <select id="volume-to" onchange="updateInfo('volume', 'to'); convert('volume')">
+                <option value="m3">Mètres cubes (m³)</option>
+                <option value="l">Litres (l)</option>
+                <option value="ml">Millilitres (ml)</option>
+                <option value="cl">Centilitres (cl)</option>
+                <option value="gal_us">Gallons US (liq)</option>
+                <option value="gal_uk">Gallons UK (imp)</option>
+                <option value="pt_us">Pintes US (liq)</option>
+                <option value="pt_uk">Pintes UK (imp)</option>
+                <option value="cup_us">Tasses US (cup)</option>
+                <option value="fl_oz_us">Onces liquides US</option>
+                <option value="fl_oz_uk">Onces liquides UK</option>
+                <option value="cu_ft">Pieds cubes (cu ft)</option>
+                <option value="cu_in">Pouces cubes (cu in)</option>
+            </select>
+            <div id="info-volume-to" class="unit-info"></div>
+        </div>
+    </div>
+
+    <!-- Section Son -->
+    <div id="sound-section" class="section">
+        <div class="form-group">
+            <label for="sound-input">Valeur :</label>
+            <input type="number" id="sound-input" placeholder="Ex: 100" oninput="convert('sound')">
+        </div>
+        <div class="form-group">
+            <label for="sound-from">De : <span id="badge-sound-from" class="region-badge badge-sci">Scientifique</span></label>
+            <select id="sound-from" onchange="updateInfo('sound', 'from'); convert('sound')">
+                <option value="db" selected>Décibels (dB)</option>
+                <option value="bel">Bels (B)</option>
+                <option value="neper">Népers (Np)</option>
+            </select>
+            <div id="info-sound-from" class="unit-info"></div>
+        </div>
+        <div class="form-group">
+            <label for="sound-to">Vers : <span id="badge-sound-to" class="region-badge badge-sci">Scientifique</span></label>
+            <select id="sound-to" onchange="updateInfo('sound', 'to'); convert('sound')">
+                <option value="db">Décibels (dB)</option>
+                <option value="bel" selected>Bels (B)</option>
+                <option value="neper">Népers (Np)</option>
+            </select>
+            <div id="info-sound-to" class="unit-info"></div>
+        </div>
+        <div class="note">
+            Conversion d'unités de rapport (1 Bel = 10 dB). Ne convertit pas l'intensité physique (W/m²).
+        </div>
+    </div>
+
+    <div class="result-box">
+        <span class="result-label">Résultat</span>
+        <span class="result-value" id="result">0</span>
+    </div>
+</div>
+
+<script>
+    // Données de contexte pour l'affichage
+    const unitContext = {
+        // Temps
+        ms: { region: "Universel", type: "si", info: "Utilisé en informatique et physique." },
+        s: { region: "Universel", type: "si", info: "Unité de base du temps." },
+        min: { region: "Universel", type: "si", info: "Usage courant quotidien." },
+        h: { region: "Universel", type: "si", info: "Usage courant quotidien." },
+        d: { region: "Universel", type: "si", info: "Cycle jour/nuit." },
+        w: { region: "Occidental", type: "si", info: "Semaine de 7 jours." },
+        mo: { region: "Universel", type: "si", info: "Moyenne de 30.44 jours." },
+        y: { region: "Universel", type: "si", info: "Année civile (365 jours)." },
+        
+        // Longueur
+        km: { region: "Monde (SI)", type: "si", info: "Distances routières et géographiques." },
+        m: { region: "Monde (SI)", type: "si", info: "Unité de base du Système International." },
+        dm: { region: "Monde (SI)", type: "si", info: "Peu utilisé, parfois en sciences." },
+        cm: { region: "Monde (SI)", type: "si", info: "Mesures courantes (taille, objets)." },
+        mm: { region: "Monde (SI)", type: "si", info: "Précision technique et ingénierie." },
+        mi: { region: "USA / UK", type: "us", info: "Mille terrestre, utilisé pour les routes." },
+        yd: { region: "USA / UK", type: "us", info: "Sports (football américain) et tissus." },
+        ft: { region: "USA / UK", type: "us", info: "Taille humaine, aviation, construction." },
+        in: { region: "USA / UK", type: "us", info: "Écrans, tuyauterie, petites mesures." },
+        nmi: { region: "Maritime / Air", type: "mar", info: "Navigation marine et aérienne." },
+
+        // Poids
+        t: { region: "Monde (SI)", type: "si", info: "Industrie, transport lourd." },
+        kg: { region: "Monde (SI)", type: "si", info: "Unité de base, poids corporel, nourriture." },
+        g: { region: "Monde (SI)", type: "si", info: "Cuisine, petites marchandises." },
+        mg: { region: "Monde (SI)", type: "si", info: "Médicaments, chimie." },
+        lb: { region: "USA / UK", type: "us", info: "Poids corporel (USA), marchandises." },
+        oz: { region: "USA / UK", type: "us", info: "Nourriture, courrier, métaux précieux." },
+        st: { region: "UK / Irlande", type: "us", info: "Poids corporel humain (Royaume-Uni)." },
+
+        // Vitesse
+        kmh: { region: "Monde (SI)", type: "si", info: "Vitesse routière standard." },
+        ms: { region: "Scientifique", type: "si", info: "Physique, météorologie." },
+        mph: { region: "USA / UK", type: "us", info: "Vitesse routière (USA, UK)." },
+        kn: { region: "Maritime / Air", type: "mar", info: "Vitesse des navires et avions." },
+        fps: { region: "USA / UK", type: "us", info: "Balistique, ingénierie US." },
+
+        // Surface
+        km2: { region: "Monde (SI)", type: "si", info: "Géographie, villes, pays." },
+        ha: { region: "Monde (SI)", type: "si", info: "Agriculture, foresterie, terrains." },
+        m2: { region: "Monde (SI)", type: "si", info: "Immobilier, construction." },
+        dm2: { region: "Monde (SI)", type: "si", info: "Rare, usage scolaire." },
+        cm2: { region: "Monde (SI)", type: "si", info: "Petites surfaces, électronique." },
+        mm2: { region: "Monde (SI)", type: "si", info: "Précision technique, fils." },
+        ac: { region: "USA / UK", type: "us", info: "Immobilier, terres agricoles." },
+        sqmi: { region: "USA / UK", type: "us", info: "Géographie (états, parcs)." },
+        sqyd: { region: "USA / UK", type: "us", info: "Tapis, tissus, construction." },
+        sqft: { region: "USA / UK", type: "us", info: "Immobilier (USA), construction." },
+        sqin: { region: "USA / UK", type: "us", info: "Petites surfaces techniques." },
+
+        // Volume
+        m3: { region: "Monde (SI)", type: "si", info: "Eau, gaz, construction." },
+        l: { region: "Monde (SI)", type: "si", info: "Liquides courants, carburant." },
+        ml: { region: "Monde (SI)", type: "si", info: "Cuisine, médicaments." },
+        cl: { region: "Europe", type: "si", info: "Boissons, cuisine en Europe." },
+        gal_us: { region: "USA", type: "us", info: "Carburant, liquides (plus petit que UK)." },
+        gal_uk: { region: "UK / Canada", type: "us", info: "Carburant, liquides (impérial)." },
+        pt_us: { region: "USA", type: "us", info: "Bières, liquides culinaires." },
+        pt_uk: { region: "UK", type: "us", info: "Bières (pinte de 568ml)." },
+        cup_us: { region: "USA", type: "us", info: "Recettes de cuisine américaines." },
+        fl_oz_us: { region: "USA", type: "us", info: "Boissons, cosmétiques." },
+        fl_oz_uk: { region: "UK", type: "us", info: "Liquides divers." },
+        cu_ft: { region: "USA / UK", type: "us", info: "Réfrigérateurs, gaz, déménagement." },
+        cu_in: { region: "USA / UK", type: "us", info: "Moteurs (cylindrée), petites boîtes." },
+
+        // Son
+        db: { region: "Universel", type: "sci", info: "Niveau sonore, audio, acoustique." },
+        bel: { region: "Scientifique", type: "sci", info: "Unité d'origine (peu utilisée seule)." },
+        neper: { region: "Scientifique", type: "sci", info: "Télécoms, théorie des circuits." }
+    };
+
+    const timeFactors = { ms: 0.001, s: 1, min: 60, h: 3600, d: 86400, w: 604800, mo: 2628000, y: 31536000 };
+    const lengthFactors = { km: 1000, m: 1, dm: 0.1, cm: 0.01, mm: 0.001, mi: 1609.344, yd: 0.9144, ft: 0.3048, in: 0.0254, nmi: 1852 };
+    const weightFactors = { t: 1000000, kg: 1000, g: 1, mg: 0.001, lb: 453.59237, oz: 28.349523125, st: 6350.29318 };
+    const speedFactors = { ms: 1, kmh: 1/3.6, mph: 0.44704, kn: 0.514444, fps: 0.3048 };
+    const areaFactors = { km2: 1000000, ha: 10000, m2: 1, dm2: 0.01, cm2: 0.0001, mm2: 0.000001, ac: 4046.8564224, sqmi: 2589988.110336, sqyd: 0.83612736, sqft: 0.09290304, sqin: 0.00064516 };
+    const volumeFactors = { m3: 1000, l: 1, ml: 0.001, cl: 0.01, gal_us: 3.785411784, gal_uk: 4.54609, pt_us: 0.473176473, pt_uk: 0.56826125, cup_us: 0.236588236, fl_oz_us: 0.029573529, fl_oz_uk: 0.028413062, cu_ft: 28.316846592, cu_in: 0.016387064 };
+    const soundFactors = { db: 1, bel: 10, neper: 8.68588963807 };
+
+    function switchCategory(category) {
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(category + '-section').classList.add('active');
+        
+        const map = { 'time': 0, 'length': 1, 'weight': 2, 'speed': 3, 'area': 4, 'volume': 5, 'sound': 6 };
+        if(map[category] !== undefined) document.querySelectorAll('.tab-btn')[map[category]].classList.add('active');
+
+        document.getElementById('result').textContent = "0";
+        const inputField = document.getElementById(category + '-input');
+        inputField.value = '';
+        inputField.focus();
+        
+        // Initialiser les infos pour les selects par défaut
+        updateInfo(category, 'from');
+        updateInfo(category, 'to');
+    }
+
+    function updateInfo(category, side) {
+        const unit = document.getElementById(category + '-' + side).value;
+        const data = unitContext[unit];
+        const badge = document.getElementById(`badge-${category}-${side}`);
+        const info = document.getElementById(`info-${category}-${side}`);
+
+        if (data) {
+            badge.textContent = data.region;
+            badge.className = `region-badge badge-${data.type}`;
+            info.textContent = data.info;
+        }
+    }
+
+    function convert(type) {
+        let input, from, to, factors;
+        const resultElement = document.getElementById('result');
+        const inputEl = document.getElementById(type + '-input');
+        const fromEl = document.getElementById(type + '-from');
+        const toEl = document.getElementById(type + '-to');
+
+        if (!inputEl || !fromEl || !toEl) return;
+
+        input = parseFloat(inputEl.value);
+        from = fromEl.value;
+        to = toEl.value;
+
+        switch(type) {
+            case 'time': factors = timeFactors; break;
+            case 'length': factors = lengthFactors; break;
+            case 'weight': factors = weightFactors; break;
+            case 'speed': factors = speedFactors; break;
+            case 'area': factors = areaFactors; break;
+            case 'volume': factors = volumeFactors; break;
+            case 'sound': factors = soundFactors; break;
+            default: return;
+        }
+
+        if (isNaN(input)) {
+            resultElement.textContent = "0";
+            return;
+        }
+
+        const baseValue = input * factors[from];
+        const finalValue = baseValue / factors[to];
+
+        let displayValue;
+        if (finalValue === 0) displayValue = 0;
+        else if (type === 'sound') displayValue = parseFloat(finalValue.toFixed(4));
+        else if (Math.abs(finalValue) < 0.000001 || Math.abs(finalValue) > 10000000) displayValue = finalValue.toExponential(4);
+        else if (Number.isInteger(finalValue)) displayValue = finalValue;
+        else displayValue = parseFloat(finalValue.toFixed(6));
+
+        resultElement.textContent = displayValue;
+    }
+
+    // Initialisation au chargement
+    window.onload = function() {
+        updateInfo('time', 'from');
+        updateInfo('time', 'to');
+        // Mettre à jour les autres catégories cachées pour quand on cliquera dessus
+        ['length', 'weight', 'speed', 'area', 'volume', 'sound'].forEach(cat => {
+            // On ne le fait pas visiblement, mais la fonction est prête
+        });
+    };
+</script>
+
+</body>
+</html>
