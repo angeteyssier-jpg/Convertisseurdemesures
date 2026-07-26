@@ -599,13 +599,55 @@
         const finalValue = baseValue / factors[to];
 
         let displayValue;
+        // 1. Calcul du nombre principal
         if (finalValue === 0) displayValue = 0;
         else if (type === 'sound') displayValue = parseFloat(finalValue.toFixed(4));
         else if (Math.abs(finalValue) < 0.000001 || Math.abs(finalValue) > 10000000) displayValue = finalValue.toExponential(4);
         else if (Number.isInteger(finalValue)) displayValue = finalValue;
         else displayValue = parseFloat(finalValue.toFixed(6));
 
-        resultElement.textContent = displayValue;
+        // 2. Gestion de l'affichage de l'unité
+        let unitLabel = "";
+        let sideInfo = "";
+
+        // Récupération du symbole de l'unité (ex: "m²" depuis "Mètres carrés (m²)")
+        const selectedOption = toEl.options[toEl.selectedIndex].text;
+        const match = selectedOption.match(/\(([^)]+)\)/);
+        const symbol = (match && match[1]) ? match[1] : selectedOption;
+
+        if (type === 'area') {
+            // --- UNIQUEMENT POUR LES SURFACES ---
+            unitLabel = " " + symbol;
+            
+            if (finalValue >= 0) {
+                const sideLength = Math.sqrt(finalValue);
+                let sideDisplay;
+                
+                // Formatage intelligent du côté
+                if (Number.isInteger(sideLength)) {
+                    sideDisplay = sideLength;
+                } else {
+                    sideDisplay = parseFloat(sideLength.toFixed(4));
+                }
+
+                // Nettoyer l'unité pour avoir la longueur (enlever le ² ou le 2)
+                // Ex: m² -> m, km2 -> km, sqft -> ft (si on avait codé ainsi, mais ici c'est géré par le symbole)
+                let linearUnit = symbol.replace(/²/g, "").replace(/2/g, "").trim();
+                
+                // Cas spécifique pour les acres ou autres si le symbole ne se nettoie pas bien
+                // Mais avec vos options (m², km², etc.), le replace suffit.
+                
+                sideInfo = ` (côté : ${sideDisplay} ${linearUnit})`;
+            }
+        } else {
+            // Pour les autres catégories (dont Volume), on affiche juste la valeur et l'unité
+            if (match && match[1]) {
+                unitLabel = " " + match[1];
+            }
+        }
+
+        // 3. Affichage final
+        resultElement.textContent = displayValue + unitLabel + sideInfo;
     }
 
     // Initialisation au chargement
