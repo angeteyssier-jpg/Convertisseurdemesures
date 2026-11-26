@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#007bff">
     <title>Convertisseur Universel</title>
     <style>
+        * { box-sizing: border-box; }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f4f9;
@@ -28,16 +31,48 @@
         h2 {
             text-align: center;
             color: #333;
-            margin-bottom: 1.5rem;
+            margin: 0 0 1.2rem;
         }
 
-        .form-group {
+        /* Onglets en « pastilles » sur 4 colonnes : tous visibles, aussi sur téléphone */
+        .category-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, auto);   /* colonnes adaptées à la longueur des mots */
+            gap: 6px;
             margin-bottom: 1.2rem;
         }
 
+        button { -webkit-tap-highlight-color: transparent; }   /* pas de rectangle bleu au toucher */
+
+        .tab-btn {
+            background: #f1f3f5;
+            border: 1px solid #e1e4e8;
+            padding: 8px 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #555;
+            border-radius: 999px;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        /* Survol seulement avec une souris (sur écran tactile, il resterait « collé » après l'appui) */
+        @media (hover: hover) {
+            .tab-btn:hover { background-color: #e7f1ff; color: #0056b3; }
+        }
+
+        .tab-btn.active {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+
+        .form-group { margin-bottom: 1rem; }
+
         label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             color: #555;
             font-weight: 600;
         }
@@ -47,8 +82,10 @@
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
+            font-size: 1rem;           /* 16 px : évite le zoom automatique sur iPhone */
+            font-family: inherit;
+            background-color: white;
+            color: #222;
         }
 
         select:focus, input:focus {
@@ -57,7 +94,30 @@
             box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
         }
 
-        /* Nouveau style pour l'indicateur de région */
+        /* Champ de saisie avec bouton ✕ pour l'effacer */
+        .input-wrapper { position: relative; }
+        .input-wrapper input { padding-right: 44px; }
+        .clear-btn {
+            position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+            width: 32px; height: 32px; border: none; border-radius: 50%;
+            background: #e9ecef; color: #666; font-size: 0.9rem; cursor: pointer;
+            display: none; align-items: center; justify-content: center; padding: 0;
+        }
+        .clear-btn.visible { display: flex; }
+
+        .sign-btn {
+            position: absolute; right: 44px; top: 50%; transform: translateY(-50%);
+            height: 32px; min-width: 36px; border: 1px solid #cfd4da; border-radius: 6px;
+            background: white; color: #007bff; font-size: 1.05rem; font-weight: bold; cursor: pointer;
+            display: none; align-items: center; justify-content: center; padding: 0 6px;
+        }
+        .input-wrapper.has-sign .sign-btn { display: flex; }
+        .input-wrapper.has-sign input { padding-right: 88px; }
+
+        .input-error { color: #c62828; font-size: 0.85rem; margin-top: 4px; }
+        .input-error:empty { display: none; }
+
+        /* Indicateur de région */
         .region-badge {
             display: inline-block;
             font-size: 0.75rem;
@@ -67,30 +127,33 @@
             font-weight: normal;
             vertical-align: middle;
         }
-        .badge-si { background-color: #e3f2fd; color: #1565c0; } /* Bleu pour SI */
-        .badge-us { background-color: #fff3e0; color: #ef6c00; } /* Orange pour US/UK */
-        .badge-mar { background-color: #e0f2f1; color: #00695c; } /* Vert pour Maritime */
-        .badge-sci { background-color: #f3e5f5; color: #7b1fa2; } /* Violet pour Scientifique */
+        .badge-si { background-color: #e3f2fd; color: #1565c0; }   /* Bleu pour SI */
+        .badge-us { background-color: #fff3e0; color: #ef6c00; }   /* Orange pour US/UK */
+        .badge-mar { background-color: #e0f2f1; color: #00695c; }  /* Vert pour Maritime */
+        .badge-sci { background-color: #f3e5f5; color: #7b1fa2; }  /* Violet pour Scientifique */
+        .badge-hist { background-color: #efebe9; color: #5d4037; } /* Brun pour les anciennes mesures */
 
         .unit-info {
             font-size: 0.85rem;
             color: #666;
             margin-top: 5px;
-            min-height: 1.2em; /* Évite le saut de ligne quand vide */
+            min-height: 1.2em;
             font-style: italic;
         }
 
+        /* Résultat : placé juste sous la valeur pour rester visible au-dessus du clavier du téléphone */
         .result-box {
+            position: relative;
             background-color: #e9ecef;
-            padding: 1rem;
+            padding: 0.9rem 1rem;
             border-radius: 6px;
             text-align: center;
-            margin-top: 1.5rem;
+            margin: 0 0 1.2rem;
             border: 1px solid #dee2e6;
         }
 
         .result-label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: #666;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -101,64 +164,38 @@
             font-weight: bold;
             color: #007bff;
             display: block;
-            margin-top: 0.5rem;
-            word-break: break-all;
+            margin-top: 0.4rem;
+            overflow-wrap: anywhere;
             font-family: 'Courier New', Courier, monospace;
         }
 
-        .category-tabs {
-            display: flex;
-            justify-content: flex-start;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid #eee;
-            overflow-x: auto;
-            gap: 5px;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
+        .result-equation, .result-side {
+            font-size: 0.85rem;
+            color: #555;
+            margin-top: 0.35rem;
+            overflow-wrap: anywhere;
         }
-        
-        .category-tabs::-webkit-scrollbar { display: none; }
+        .result-side:empty, .result-equation:empty { display: none; }
 
-        .tab-btn {
-            background: none;
-            border: none;
-            padding: 10px 12px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: #666;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            transition: all 0.3s;
-            white-space: nowrap;
-            flex-shrink: 0;
+        .copy-btn {
+            position: absolute; top: 8px; right: 8px;
+            background: white; border: 1px solid #cfd4da; border-radius: 6px;
+            padding: 4px 10px; font-size: 0.8rem; color: #007bff; cursor: pointer;
+            font-family: inherit;
         }
+        .copy-btn:disabled { color: #aaa; cursor: default; }
 
-        .tab-btn:hover {
-            color: #0056b3;
-            background-color: #f8f9fa;
-            border-radius: 4px 4px 0 0;
+        /* Bouton pour inverser les unités */
+        .swap-row { display: flex; justify-content: center; margin: -0.3rem 0 0.5rem; }
+        .swap-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            border: 1px solid #cfd4da; background: white; color: #007bff;
+            font-size: 1.3rem; cursor: pointer; line-height: 1;
+        }
+        @media (hover: hover) {
+            .swap-btn:hover { background: #e7f1ff; }
         }
 
-        .tab-btn.active {
-            color: #007bff;
-            border-bottom: 2px solid #007bff;
-            font-weight: bold;
-        }
-
-        .section {
-            display: none;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .section.active {
-            display: block;
-        }
-        
         .note {
             font-size: 0.8rem;
             color: #777;
@@ -170,6 +207,27 @@
             border-radius: 4px;
             border-left: 3px solid #007bff;
         }
+        .note[hidden] { display: none; }
+
+        /* Téléphone : marges réduites, carte en haut de l'écran */
+        @media (max-width: 480px) {
+            body { padding: 8px; align-items: flex-start; }
+            .converter-card { padding: 1rem; border-radius: 10px; }
+            h2 { font-size: 1.2rem; margin-bottom: 0.6rem; }
+            .category-tabs { gap: 5px; margin-bottom: 0.8rem; }
+            .tab-btn { padding: 7px 5px; font-size: 0.85rem; }
+            .result-box { padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+            .result-value { font-size: 1.5rem; margin-top: 0.3rem; }
+            .form-group { margin-bottom: 0.8rem; }
+            label { margin-bottom: 0.3rem; }
+        }
+
+        /* Très petits téléphones (≤ 360 px) */
+        @media (max-width: 360px) {
+            .converter-card { padding: 0.8rem; }
+            .category-tabs { gap: 4px; }
+            .tab-btn { font-size: 0.78rem; padding: 7px 4px; }
+        }
     </style>
 </head>
 <body>
@@ -177,488 +235,477 @@
 <div class="converter-card">
     <h2>Convertisseur Universel</h2>
 
-    <!-- Onglets -->
-    <div class="category-tabs">
-        <button class="tab-btn active" onclick="switchCategory('time')">Temps</button>
-        <button class="tab-btn" onclick="switchCategory('length')">Longueur</button>
-        <button class="tab-btn" onclick="switchCategory('weight')">Poids</button>
-        <button class="tab-btn" onclick="switchCategory('speed')">Vitesse</button>
-        <button class="tab-btn" onclick="switchCategory('area')">Surface</button>
-        <button class="tab-btn" onclick="switchCategory('volume')">Volume</button>
-        <button class="tab-btn" onclick="switchCategory('sound')">Son</button>
-    </div>
+    <!-- Onglets (créés par le script) -->
+    <div class="category-tabs" id="tabs"></div>
 
-    <!-- Section Temps -->
-    <div id="time-section" class="section active">
-        <div class="form-group">
-            <label for="time-input">Valeur :</label>
-            <input type="number" id="time-input" placeholder="Ex: 120" oninput="convert('time')">
+    <div class="form-group">
+        <label for="value-input">Valeur :</label>
+        <div class="input-wrapper">
+            <!-- type="text" + inputmode="decimal" : clavier numérique avec la virgule sur téléphone -->
+            <input type="text" id="value-input" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="Ex : 100">
+            <!-- ± : valeurs négatives (le clavier numérique de l'iPhone n'a pas de touche « − ») -->
+            <button type="button" class="sign-btn" id="sign-btn" title="Positif / négatif" aria-label="Changer le signe">±</button>
+            <button type="button" class="clear-btn" id="clear-btn" title="Effacer" aria-label="Effacer la valeur">✕</button>
         </div>
-        <div class="form-group">
-            <label for="time-from">De : <span id="badge-time-from" class="region-badge badge-si">Universel</span></label>
-            <select id="time-from" onchange="updateInfo('time', 'from'); convert('time')">
-                <option value="ms">Millisecondes</option>
-                <option value="s">Secondes</option>
-                <option value="min">Minutes</option>
-                <option value="h">Heures</option>
-                <option value="d">Jours</option>
-                <option value="w">Semaines</option>
-                <option value="mo">Mois (moyen)</option>
-                <option value="y">Années</option>
-            </select>
-            <div id="info-time-from" class="unit-info"></div>
-        </div>
-        <div class="form-group">
-            <label for="time-to">Vers : <span id="badge-time-to" class="region-badge badge-si">Universel</span></label>
-            <select id="time-to" onchange="updateInfo('time', 'to'); convert('time')">
-                <option value="y">Années</option>
-                <option value="mo">Mois (moyen)</option>
-                <option value="w">Semaines</option>
-                <option value="d">Jours</option>
-                <option value="h">Heures</option>
-                <option value="min">Minutes</option>
-                <option value="s" selected>Secondes</option>
-                <option value="ms">Millisecondes</option>
-            </select>
-            <div id="info-time-to" class="unit-info"></div>
-        </div>
-    </div>
-
-    <!-- Section Longueur -->
-    <div id="length-section" class="section">
-        <div class="form-group">
-            <label for="length-input">Valeur :</label>
-            <input type="number" id="length-input" placeholder="Ex: 100" oninput="convert('length')">
-        </div>
-        <div class="form-group">
-            <label for="length-from">De : <span id="badge-length-from" class="region-badge badge-si">SI</span></label>
-            <select id="length-from" onchange="updateInfo('length', 'from'); convert('length')">
-                <option value="km">Kilomètres (km)</option>
-                <option value="m" selected>Mètres (m)</option>
-                <option value="dm">Décimètres (dm)</option>
-                <option value="cm">Centimètres (cm)</option>
-                <option value="mm">Millimètres (mm)</option>
-                <option value="mi">Miles (mi)</option>
-                <option value="yd">Yards (yd)</option>
-                <option value="ft">Pieds (ft)</option>
-                <option value="in">Pouces (in)</option>
-                <option value="nmi">Milles marins</option>
-            </select>
-            <div id="info-length-from" class="unit-info">Unité de base du système international.</div>
-        </div>
-        <div class="form-group">
-            <label for="length-to">Vers : <span id="badge-length-to" class="region-badge badge-si">SI</span></label>
-            <select id="length-to" onchange="updateInfo('length', 'to'); convert('length')">
-                <option value="km">Kilomètres (km)</option>
-                <option value="m">Mètres (m)</option>
-                <option value="dm">Décimètres (dm)</option>
-                <option value="cm">Centimètres (cm)</option>
-                <option value="mm">Millimètres (mm)</option>
-                <option value="mi">Miles (mi)</option>
-                <option value="yd">Yards (yd)</option>
-                <option value="ft">Pieds (ft)</option>
-                <option value="in">Pouces (in)</option>
-                <option value="nmi">Milles marins</option>
-            </select>
-            <div id="info-length-to" class="unit-info"></div>
-        </div>
-    </div>
-
-    <!-- Section Poids -->
-    <div id="weight-section" class="section">
-        <div class="form-group">
-            <label for="weight-input">Valeur :</label>
-            <input type="number" id="weight-input" placeholder="Ex: 50" oninput="convert('weight')">
-        </div>
-        <div class="form-group">
-            <label for="weight-from">De : <span id="badge-weight-from" class="region-badge badge-si">SI</span></label>
-            <select id="weight-from" onchange="updateInfo('weight', 'from'); convert('weight')">
-                <option value="t">Tonnes (t)</option>
-                <option value="kg">Kilogrammes (kg)</option>
-                <option value="g">Grammes (g)</option>
-                <option value="mg">Milligrammes (mg)</option>
-                <option value="lb">Livres (lb)</option>
-                <option value="oz">Onces (oz)</option>
-                <option value="st">Stone (st)</option>
-            </select>
-            <div id="info-weight-from" class="unit-info"></div>
-        </div>
-        <div class="form-group">
-            <label for="weight-to">Vers : <span id="badge-weight-to" class="region-badge badge-si">SI</span></label>
-            <select id="weight-to" onchange="updateInfo('weight', 'to'); convert('weight')">
-                <option value="t">Tonnes (t)</option>
-                <option value="kg">Kilogrammes (kg)</option>
-                <option value="g">Grammes (g)</option>
-                <option value="mg">Milligrammes (mg)</option>
-                <option value="lb">Livres (lb)</option>
-                <option value="oz">Onces (oz)</option>
-                <option value="st">Stone (st)</option>
-            </select>
-            <div id="info-weight-to" class="unit-info"></div>
-        </div>
-    </div>
-
-    <!-- Section Vitesse -->
-    <div id="speed-section" class="section">
-        <div class="form-group">
-            <label for="speed-input">Valeur :</label>
-            <input type="number" id="speed-input" placeholder="Ex: 90" oninput="convert('speed')">
-        </div>
-        <div class="form-group">
-            <label for="speed-from">De : <span id="badge-speed-from" class="region-badge badge-si">SI</span></label>
-            <select id="speed-from" onchange="updateInfo('speed', 'from'); convert('speed')">
-                <option value="kmh">Kilomètres/heure (km/h)</option>
-                <option value="ms">Mètres/seconde (m/s)</option>
-                <option value="mph">Miles/heure (mph)</option>
-                <option value="kn">Nœuds (kn)</option>
-                <option value="fps">Pieds/seconde (ft/s)</option>
-            </select>
-            <div id="info-speed-from" class="unit-info"></div>
-        </div>
-        <div class="form-group">
-            <label for="speed-to">Vers : <span id="badge-speed-to" class="region-badge badge-si">SI</span></label>
-            <select id="speed-to" onchange="updateInfo('speed', 'to'); convert('speed')">
-                <option value="kmh">Kilomètres/heure (km/h)</option>
-                <option value="ms" selected>Mètres/seconde (m/s)</option>
-                <option value="mph">Miles/heure (mph)</option>
-                <option value="kn">Nœuds (kn)</option>
-                <option value="fps">Pieds/seconde (ft/s)</option>
-            </select>
-            <div id="info-speed-to" class="unit-info"></div>
-        </div>
-        <div class="note">1 m/s = 3.6 km/h.</div>
-    </div>
-
-    <!-- Section Surface -->
-    <div id="area-section" class="section">
-        <div class="form-group">
-            <label for="area-input">Valeur :</label>
-            <input type="number" id="area-input" placeholder="Ex: 1" oninput="convert('area')">
-        </div>
-        <div class="form-group">
-            <label for="area-from">De : <span id="badge-area-from" class="region-badge badge-si">SI</span></label>
-            <select id="area-from" onchange="updateInfo('area', 'from'); convert('area')">
-                <option value="km2">Kilomètres carrés (km²)</option>
-                <option value="ha">Hectares (ha)</option>
-                <option value="m2" selected>Mètres carrés (m²)</option>
-                <option value="dm2">Décimètres carrés (dm²)</option>
-                <option value="cm2">Centimètres carrés (cm²)</option>
-                <option value="mm2">Millimètres carrés (mm²)</option>
-                <option value="ac">Acres (ac)</option>
-                <option value="sqmi">Miles carrés (sq mi)</option>
-                <option value="sqyd">Yards carrés (sq yd)</option>
-                <option value="sqft">Pieds carrés (sq ft)</option>
-                <option value="sqin">Pouces carrés (sq in)</option>
-            </select>
-            <div id="info-area-from" class="unit-info"></div>
-        </div>
-        <div class="form-group">
-            <label for="area-to">Vers : <span id="badge-area-to" class="region-badge badge-si">SI</span></label>
-            <select id="area-to" onchange="updateInfo('area', 'to'); convert('area')">
-                <option value="km2">Kilomètres carrés (km²)</option>
-                <option value="ha">Hectares (ha)</option>
-                <option value="m2">Mètres carrés (m²)</option>
-                <option value="dm2">Décimètres carrés (dm²)</option>
-                <option value="cm2">Centimètres carrés (cm²)</option>
-                <option value="mm2">Millimètres carrés (mm²)</option>
-                <option value="ac">Acres (ac)</option>
-                <option value="sqmi">Miles carrés (sq mi)</option>
-                <option value="sqyd">Yards carrés (sq yd)</option>
-                <option value="sqft">Pieds carrés (sq ft)</option>
-                <option value="sqin">Pouces carrés (sq in)</option>
-            </select>
-            <div id="info-area-to" class="unit-info"></div>
-        </div>
-    </div>
-
-    <!-- Section Volume -->
-    <div id="volume-section" class="section">
-        <div class="form-group">
-            <label for="volume-input">Valeur :</label>
-            <input type="number" id="volume-input" placeholder="Ex: 10" oninput="convert('volume')">
-        </div>
-        <div class="form-group">
-            <label for="volume-from">De : <span id="badge-volume-from" class="region-badge badge-si">SI</span></label>
-            <select id="volume-from" onchange="updateInfo('volume', 'from'); convert('volume')">
-                <option value="m3">Mètres cubes (m³)</option>
-                <option value="l" selected>Litres (l)</option>
-                <option value="ml">Millilitres (ml)</option>
-                <option value="cl">Centilitres (cl)</option>
-                <option value="gal_us">Gallons US (liq)</option>
-                <option value="gal_uk">Gallons UK (imp)</option>
-                <option value="pt_us">Pintes US (liq)</option>
-                <option value="pt_uk">Pintes UK (imp)</option>
-                <option value="cup_us">Tasses US (cup)</option>
-                <option value="fl_oz_us">Onces liquides US</option>
-                <option value="fl_oz_uk">Onces liquides UK</option>
-                <option value="cu_ft">Pieds cubes (cu ft)</option>
-                <option value="cu_in">Pouces cubes (cu in)</option>
-            </select>
-            <div id="info-volume-from" class="unit-info"></div>
-        </div>
-        <div class="form-group">
-            <label for="volume-to">Vers : <span id="badge-volume-to" class="region-badge badge-si">SI</span></label>
-            <select id="volume-to" onchange="updateInfo('volume', 'to'); convert('volume')">
-                <option value="m3">Mètres cubes (m³)</option>
-                <option value="l">Litres (l)</option>
-                <option value="ml">Millilitres (ml)</option>
-                <option value="cl">Centilitres (cl)</option>
-                <option value="gal_us">Gallons US (liq)</option>
-                <option value="gal_uk">Gallons UK (imp)</option>
-                <option value="pt_us">Pintes US (liq)</option>
-                <option value="pt_uk">Pintes UK (imp)</option>
-                <option value="cup_us">Tasses US (cup)</option>
-                <option value="fl_oz_us">Onces liquides US</option>
-                <option value="fl_oz_uk">Onces liquides UK</option>
-                <option value="cu_ft">Pieds cubes (cu ft)</option>
-                <option value="cu_in">Pouces cubes (cu in)</option>
-            </select>
-            <div id="info-volume-to" class="unit-info"></div>
-        </div>
-    </div>
-
-    <!-- Section Son -->
-    <div id="sound-section" class="section">
-        <div class="form-group">
-            <label for="sound-input">Valeur :</label>
-            <input type="number" id="sound-input" placeholder="Ex: 100" oninput="convert('sound')">
-        </div>
-        <div class="form-group">
-            <label for="sound-from">De : <span id="badge-sound-from" class="region-badge badge-sci">Scientifique</span></label>
-            <select id="sound-from" onchange="updateInfo('sound', 'from'); convert('sound')">
-                <option value="db" selected>Décibels (dB)</option>
-                <option value="bel">Bels (B)</option>
-                <option value="neper">Népers (Np)</option>
-            </select>
-            <div id="info-sound-from" class="unit-info"></div>
-        </div>
-        <div class="form-group">
-            <label for="sound-to">Vers : <span id="badge-sound-to" class="region-badge badge-sci">Scientifique</span></label>
-            <select id="sound-to" onchange="updateInfo('sound', 'to'); convert('sound')">
-                <option value="db">Décibels (dB)</option>
-                <option value="bel" selected>Bels (B)</option>
-                <option value="neper">Népers (Np)</option>
-            </select>
-            <div id="info-sound-to" class="unit-info"></div>
-        </div>
-        <div class="note">
-            Conversion d'unités de rapport (1 Bel = 10 dB). Ne convertit pas l'intensité physique (W/m²).
-        </div>
+        <div class="input-error" id="input-error"></div>
     </div>
 
     <div class="result-box">
         <span class="result-label">Résultat</span>
+        <button type="button" class="copy-btn" id="copy-btn" disabled>Copier</button>
         <span class="result-value" id="result">0</span>
+        <div class="result-equation" id="result-equation"></div>
+        <div class="result-side" id="result-side"></div>
     </div>
+
+    <div class="form-group">
+        <label for="unit-from">De : <span id="badge-from" class="region-badge"></span></label>
+        <select id="unit-from"></select>
+        <div id="info-from" class="unit-info"></div>
+    </div>
+
+    <div class="swap-row">
+        <button type="button" class="swap-btn" id="swap-btn" title="Inverser les unités" aria-label="Inverser les unités">⇅</button>
+    </div>
+
+    <div class="form-group">
+        <label for="unit-to">Vers : <span id="badge-to" class="region-badge"></span></label>
+        <select id="unit-to"></select>
+        <div id="info-to" class="unit-info"></div>
+    </div>
+
+    <div class="note" id="note" hidden></div>
 </div>
 
 <script>
-    // Données de contexte pour l'affichage
-    const unitContext = {
-        // Temps
-        ms: { region: "Universel", type: "si", info: "Utilisé en informatique et physique." },
-        s: { region: "Universel", type: "si", info: "Unité de base du temps." },
-        min: { region: "Universel", type: "si", info: "Usage courant quotidien." },
-        h: { region: "Universel", type: "si", info: "Usage courant quotidien." },
-        d: { region: "Universel", type: "si", info: "Cycle jour/nuit." },
-        w: { region: "Occidental", type: "si", info: "Semaine de 7 jours." },
-        mo: { region: "Universel", type: "si", info: "Moyenne de 30.44 jours." },
-        y: { region: "Universel", type: "si", info: "Année civile (365 jours)." },
-        
-        // Longueur
-        km: { region: "Monde (SI)", type: "si", info: "Distances routières et géographiques." },
-        m: { region: "Monde (SI)", type: "si", info: "Unité de base du Système International." },
-        dm: { region: "Monde (SI)", type: "si", info: "Peu utilisé, parfois en sciences." },
-        cm: { region: "Monde (SI)", type: "si", info: "Mesures courantes (taille, objets)." },
-        mm: { region: "Monde (SI)", type: "si", info: "Précision technique et ingénierie." },
-        mi: { region: "USA / UK", type: "us", info: "Mille terrestre, utilisé pour les routes." },
-        yd: { region: "USA / UK", type: "us", info: "Sports (football américain) et tissus." },
-        ft: { region: "USA / UK", type: "us", info: "Taille humaine, aviation, construction." },
-        in: { region: "USA / UK", type: "us", info: "Écrans, tuyauterie, petites mesures." },
-        nmi: { region: "Maritime / Air", type: "mar", info: "Navigation marine et aérienne." },
+    // ------------------------------------------------------------------
+    // DONNÉES : catégories, groupes et unités
+    //   factor  : valeur de l'unité dans l'unité de référence de la catégorie
+    //   symbol  : abréviation affichée (ex. "km") ; sinon word / plural (ex. "lieue" / "lieues")
+    //   side    : (surfaces) unité de longueur du côté du carré équivalent
+    // ------------------------------------------------------------------
 
-        // Poids
-        t: { region: "Monde (SI)", type: "si", info: "Industrie, transport lourd." },
-        kg: { region: "Monde (SI)", type: "si", info: "Unité de base, poids corporel, nourriture." },
-        g: { region: "Monde (SI)", type: "si", info: "Cuisine, petites marchandises." },
-        mg: { region: "Monde (SI)", type: "si", info: "Médicaments, chimie." },
-        lb: { region: "USA / UK", type: "us", info: "Poids corporel (USA), marchandises." },
-        oz: { region: "USA / UK", type: "us", info: "Nourriture, courrier, métaux précieux." },
-        st: { region: "UK / Irlande", type: "us", info: "Poids corporel humain (Royaume-Uni)." },
+    // Pied du roi (pied de Paris) : 9000/27706 m exactement (loi du 19 frimaire an VIII)
+    const PIED_DU_ROI = 9000 / 27706;
+    const TOISE = 6 * PIED_DU_ROI;   // ≈ 1,949 m
 
-        // Vitesse
-        kmh: { region: "Monde (SI)", type: "si", info: "Vitesse routière standard." },
-        ms: { region: "Scientifique", type: "si", info: "Physique, météorologie." },
-        mph: { region: "USA / UK", type: "us", info: "Vitesse routière (USA, UK)." },
-        kn: { region: "Maritime / Air", type: "mar", info: "Vitesse des navires et avions." },
-        fps: { region: "USA / UK", type: "us", info: "Balistique, ingénierie US." },
+    const CATEGORIES = [
+        {
+            id: 'time', label: 'Temps', placeholder: 'Ex : 120', defaults: ['ms', 's'],
+            groups: [{ units: [
+                { id: 'ms', label: 'Millisecondes', symbol: 'ms', factor: 0.001, region: 'Universel', type: 'si', info: 'Utilisé en informatique et physique.' },
+                { id: 's', label: 'Secondes', symbol: 's', factor: 1, region: 'Universel', type: 'si', info: 'Unité de base du temps.' },
+                { id: 'min', label: 'Minutes', symbol: 'min', factor: 60, region: 'Universel', type: 'si', info: 'Usage courant quotidien.' },
+                { id: 'h', label: 'Heures', symbol: 'h', factor: 3600, region: 'Universel', type: 'si', info: 'Usage courant quotidien.' },
+                { id: 'd', label: 'Jours', word: 'jour', plural: 'jours', factor: 86400, region: 'Universel', type: 'si', info: 'Cycle jour/nuit.' },
+                { id: 'w', label: 'Semaines', word: 'semaine', plural: 'semaines', factor: 604800, region: 'Occidental', type: 'si', info: 'Semaine de 7 jours.' },
+                { id: 'mo', label: 'Mois (moyen)', word: 'mois', plural: 'mois', factor: 2628000, region: 'Universel', type: 'si', info: 'Moyenne : 1/12 d\'année, soit environ 30,42 jours.' },
+                { id: 'y', label: 'Années', word: 'an', plural: 'ans', factor: 31536000, region: 'Universel', type: 'si', info: 'Année civile (365 jours).' },
+            ]}],
+        },
+        {
+            id: 'length', label: 'Longueur', placeholder: 'Ex : 100', defaults: ['m', 'km'],
+            groups: [
+                { name: 'Système international', units: [
+                    { id: 'km', label: 'Kilomètres', symbol: 'km', factor: 1000, region: 'Monde (SI)', type: 'si', info: 'Distances routières et géographiques.' },
+                    { id: 'm', label: 'Mètres', symbol: 'm', factor: 1, region: 'Monde (SI)', type: 'si', info: 'Unité de base du Système International.' },
+                    { id: 'dm', label: 'Décimètres', symbol: 'dm', factor: 0.1, region: 'Monde (SI)', type: 'si', info: 'Peu utilisé, parfois en sciences.' },
+                    { id: 'cm', label: 'Centimètres', symbol: 'cm', factor: 0.01, region: 'Monde (SI)', type: 'si', info: 'Mesures courantes (taille, objets).' },
+                    { id: 'mm', label: 'Millimètres', symbol: 'mm', factor: 0.001, region: 'Monde (SI)', type: 'si', info: 'Précision technique et ingénierie.' },
+                ]},
+                { name: 'USA / UK', units: [
+                    { id: 'mi', label: 'Miles', symbol: 'mi', factor: 1609.344, region: 'USA / UK', type: 'us', info: 'Mille terrestre, utilisé pour les routes.' },
+                    { id: 'yd', label: 'Yards', symbol: 'yd', factor: 0.9144, region: 'USA / UK', type: 'us', info: 'Sports (football américain) et tissus.' },
+                    { id: 'ft', label: 'Pieds', symbol: 'ft', factor: 0.3048, region: 'USA / UK', type: 'us', info: 'Taille humaine, aviation, construction.' },
+                    { id: 'in', label: 'Pouces', symbol: 'in', factor: 0.0254, region: 'USA / UK', type: 'us', info: 'Écrans, tuyauterie, petites mesures.' },
+                ]},
+                { name: 'Maritime / Air', units: [
+                    { id: 'nmi', label: 'Milles marins', word: 'mille marin', plural: 'milles marins', factor: 1852, region: 'Maritime / Air', type: 'mar', info: 'Navigation marine et aérienne (1 852 m).' },
+                ]},
+                { name: 'Pas et lieues', note: 'Pas et lieues : anciennes mesures dont la valeur variait selon l\'époque et la région. Le pas de marche est une moyenne (≈ 0,75 m), qui dépend de la taille et de l\'allure.', units: [
+                    { id: 'pas', label: 'Pas de marche (≈ 0,75 m)', word: 'pas', plural: 'pas', factor: 0.75, region: 'Estimation', type: 'hist', info: 'Longueur moyenne d\'un pas d\'adulte : utile pour estimer une distance à pied.' },
+                    { id: 'pas_commun', label: 'Pas commun (≈ 0,812 m)', word: 'pas', plural: 'pas', factor: 2.5 * PIED_DU_ROI, region: 'Ancienne mesure', type: 'hist', info: 'Ancien pas de 2 pieds ½ (pieds du roi).' },
+                    { id: 'pas_geo', label: 'Pas géométrique (≈ 1,624 m)', word: 'pas', plural: 'pas', factor: 5 * PIED_DU_ROI, region: 'Ancienne mesure', type: 'hist', info: 'Ancien double pas de 5 pieds du roi.' },
+                    { id: 'lieue_metrique', label: 'Lieue métrique (4 km)', word: 'lieue', plural: 'lieues', factor: 4000, region: 'Ancienne mesure', type: 'hist', info: 'La lieue « moderne », comptée à 4 km après l\'adoption du mètre.' },
+                    { id: 'lieue_paris', label: 'Lieue de Paris (≈ 3,898 km)', word: 'lieue', plural: 'lieues', factor: 2000 * TOISE, region: 'Ancienne mesure', type: 'hist', info: '2 000 toises (1674-1793), dite aussi des Ponts et Chaussées.' },
+                    { id: 'lieue_commune', label: 'Lieue commune (≈ 4,444 km)', word: 'lieue', plural: 'lieues', factor: 40000000 / 9000, region: 'Ancienne mesure', type: 'hist', info: 'Lieue commune de France : 1/25 de degré terrestre.' },
+                    { id: 'lieue_marine', label: 'Lieue marine (≈ 5,556 km)', word: 'lieue', plural: 'lieues', factor: 3 * 1852, region: 'Maritime', type: 'mar', info: '3 milles marins : la seule lieue encore (rarement) utilisée.' },
+                ]},
+            ],
+        },
+        {
+            id: 'weight', label: 'Poids', placeholder: 'Ex : 50', defaults: ['kg', 'lb'],
+            groups: [
+                { name: 'Système international', units: [
+                    { id: 't', label: 'Tonnes', symbol: 't', factor: 1000000, region: 'Monde (SI)', type: 'si', info: 'Industrie, transport lourd.' },
+                    { id: 'kg', label: 'Kilogrammes', symbol: 'kg', factor: 1000, region: 'Monde (SI)', type: 'si', info: 'Unité de base, poids corporel, nourriture.' },
+                    { id: 'g', label: 'Grammes', symbol: 'g', factor: 1, region: 'Monde (SI)', type: 'si', info: 'Cuisine, petites marchandises.' },
+                    { id: 'mg', label: 'Milligrammes', symbol: 'mg', factor: 0.001, region: 'Monde (SI)', type: 'si', info: 'Médicaments, chimie.' },
+                ]},
+                { name: 'USA / UK', units: [
+                    { id: 'lb', label: 'Livres', symbol: 'lb', factor: 453.59237, region: 'USA / UK', type: 'us', info: 'Poids corporel (USA), marchandises.' },
+                    { id: 'oz', label: 'Onces', symbol: 'oz', factor: 28.349523125, region: 'USA / UK', type: 'us', info: 'Nourriture, courrier, métaux précieux.' },
+                    { id: 'st', label: 'Stone', symbol: 'st', factor: 6350.29318, region: 'UK / Irlande', type: 'us', info: 'Poids corporel humain (Royaume-Uni).' },
+                ]},
+            ],
+        },
+        {
+            // Températures : pas proportionnelles (0 °C = 32 °F) -> conversion par formules, via le kelvin
+            id: 'temp', label: 'Température', placeholder: 'Ex : 20', defaults: ['c', 'f'], allowNegative: true,
+            note: 'Ce sont des températures, pas des écarts : 0 °C = 32 °F, mais un écart de 1 °C vaut un écart de 1,8 °F.',
+            groups: [{ units: [
+                { id: 'c', label: 'Degrés Celsius', symbol: '°C', toBase: v => v + 273.15, fromBase: k => k - 273.15, region: 'Monde', type: 'si', info: 'Usage courant : l\'eau gèle à 0 °C et bout à 100 °C.' },
+                { id: 'f', label: 'Degrés Fahrenheit', symbol: '°F', toBase: v => (v - 32) * 5 / 9 + 273.15, fromBase: k => (k - 273.15) * 9 / 5 + 32, region: 'USA', type: 'us', info: 'Météo et cuisine aux États-Unis : l\'eau gèle à 32 °F.' },
+                { id: 'k', label: 'Kelvins', symbol: 'K', toBase: v => v, fromBase: k => k, region: 'Scientifique', type: 'sci', info: 'Unité SI : 0 K est le zéro absolu (−273,15 °C).' },
+                { id: 're', label: 'Degrés Réaumur', symbol: '°Ré', toBase: v => v * 1.25 + 273.15, fromBase: k => (k - 273.15) * 0.8, region: 'Ancienne mesure', type: 'hist', info: 'Ancienne échelle européenne : l\'eau gèle à 0 °Ré et bout à 80 °Ré.' },
+            ]}],
+        },
+        {
+            id: 'speed', label: 'Vitesse', placeholder: 'Ex : 90', defaults: ['kmh', 'ms'],
+            note: '1 m/s = 3,6 km/h.',
+            groups: [
+                { name: 'Système international', units: [
+                    { id: 'kmh', label: 'Kilomètres/heure', symbol: 'km/h', factor: 1 / 3.6, region: 'Monde (SI)', type: 'si', info: 'Vitesse routière standard.' },
+                    { id: 'ms', label: 'Mètres/seconde', symbol: 'm/s', factor: 1, region: 'Scientifique', type: 'si', info: 'Physique, météorologie.' },
+                ]},
+                { name: 'USA / UK', units: [
+                    { id: 'mph', label: 'Miles/heure', symbol: 'mph', factor: 0.44704, region: 'USA / UK', type: 'us', info: 'Vitesse routière (USA, UK).' },
+                    { id: 'fps', label: 'Pieds/seconde', symbol: 'ft/s', factor: 0.3048, region: 'USA / UK', type: 'us', info: 'Balistique, ingénierie US.' },
+                ]},
+                { name: 'Maritime / Air', units: [
+                    { id: 'kn', label: 'Nœuds', symbol: 'kn', factor: 1852 / 3600, region: 'Maritime / Air', type: 'mar', info: 'Vitesse des navires et avions (1 mille marin par heure).' },
+                ]},
+            ],
+        },
+        {
+            id: 'area', label: 'Surface', placeholder: 'Ex : 1', defaults: ['m2', 'km2'],
+            groups: [
+                { name: 'Système international', units: [
+                    { id: 'km2', label: 'Kilomètres carrés', symbol: 'km²', factor: 1000000, side: ['km', 1000], region: 'Monde (SI)', type: 'si', info: 'Géographie, villes, pays.' },
+                    { id: 'ha', label: 'Hectares', symbol: 'ha', factor: 10000, side: ['m', 1], region: 'Monde (SI)', type: 'si', info: 'Agriculture, foresterie, terrains.' },
+                    { id: 'm2', label: 'Mètres carrés', symbol: 'm²', factor: 1, side: ['m', 1], region: 'Monde (SI)', type: 'si', info: 'Immobilier, construction.' },
+                    { id: 'dm2', label: 'Décimètres carrés', symbol: 'dm²', factor: 0.01, side: ['dm', 0.1], region: 'Monde (SI)', type: 'si', info: 'Rare, usage scolaire.' },
+                    { id: 'cm2', label: 'Centimètres carrés', symbol: 'cm²', factor: 0.0001, side: ['cm', 0.01], region: 'Monde (SI)', type: 'si', info: 'Petites surfaces, électronique.' },
+                    { id: 'mm2', label: 'Millimètres carrés', symbol: 'mm²', factor: 0.000001, side: ['mm', 0.001], region: 'Monde (SI)', type: 'si', info: 'Précision technique, fils.' },
+                ]},
+                { name: 'USA / UK', units: [
+                    { id: 'ac', label: 'Acres', symbol: 'ac', factor: 4046.8564224, side: ['ft', 0.3048], region: 'USA / UK', type: 'us', info: 'Immobilier, terres agricoles.' },
+                    { id: 'sqmi', label: 'Miles carrés', symbol: 'sq mi', factor: 2589988.110336, side: ['mi', 1609.344], region: 'USA / UK', type: 'us', info: 'Géographie (états, parcs).' },
+                    { id: 'sqyd', label: 'Yards carrés', symbol: 'sq yd', factor: 0.83612736, side: ['yd', 0.9144], region: 'USA / UK', type: 'us', info: 'Tapis, tissus, construction.' },
+                    { id: 'sqft', label: 'Pieds carrés', symbol: 'sq ft', factor: 0.09290304, side: ['ft', 0.3048], region: 'USA / UK', type: 'us', info: 'Immobilier (USA), construction.' },
+                    { id: 'sqin', label: 'Pouces carrés', symbol: 'sq in', factor: 0.00064516, side: ['in', 0.0254], region: 'USA / UK', type: 'us', info: 'Petites surfaces techniques.' },
+                ]},
+            ],
+        },
+        {
+            id: 'volume', label: 'Volume', placeholder: 'Ex : 10', defaults: ['l', 'cl'],
+            groups: [
+                { name: 'Système international', units: [
+                    { id: 'm3', label: 'Mètres cubes', symbol: 'm³', factor: 1000, region: 'Monde (SI)', type: 'si', info: 'Eau, gaz, construction.' },
+                    { id: 'l', label: 'Litres', symbol: 'l', factor: 1, region: 'Monde (SI)', type: 'si', info: 'Liquides courants, carburant.' },
+                    { id: 'cl', label: 'Centilitres', symbol: 'cl', factor: 0.01, region: 'Europe', type: 'si', info: 'Boissons, cuisine en Europe.' },
+                    { id: 'ml', label: 'Millilitres', symbol: 'ml', factor: 0.001, region: 'Monde (SI)', type: 'si', info: 'Cuisine, médicaments.' },
+                ]},
+                { name: 'USA', units: [
+                    { id: 'gal_us', label: 'Gallons US (liquide)', symbol: 'gal US', factor: 3.785411784, region: 'USA', type: 'us', info: 'Carburant, liquides (plus petit que UK).' },
+                    { id: 'pt_us', label: 'Pintes US (liquide)', symbol: 'pt US', factor: 0.473176473, region: 'USA', type: 'us', info: 'Bières, liquides culinaires.' },
+                    { id: 'cup_us', label: 'Tasses US', symbol: 'cup', factor: 0.2365882365, region: 'USA', type: 'us', info: 'Recettes de cuisine américaines.' },
+                    { id: 'fl_oz_us', label: 'Onces liquides US', symbol: 'fl oz US', factor: 0.0295735295625, region: 'USA', type: 'us', info: 'Boissons, cosmétiques.' },
+                ]},
+                { name: 'Royaume-Uni (impérial)', units: [
+                    { id: 'gal_uk', label: 'Gallons UK (impérial)', symbol: 'gal UK', factor: 4.54609, region: 'UK / Canada', type: 'us', info: 'Carburant, liquides (impérial).' },
+                    { id: 'pt_uk', label: 'Pintes UK (impérial)', symbol: 'pt UK', factor: 0.56826125, region: 'UK', type: 'us', info: 'Bières (pinte de 568 ml).' },
+                    { id: 'fl_oz_uk', label: 'Onces liquides UK', symbol: 'fl oz UK', factor: 0.0284130625, region: 'UK', type: 'us', info: 'Liquides divers.' },
+                ]},
+                { name: 'USA / UK (cubes)', units: [
+                    { id: 'cu_ft', label: 'Pieds cubes', symbol: 'cu ft', factor: 28.316846592, region: 'USA / UK', type: 'us', info: 'Réfrigérateurs, gaz, déménagement.' },
+                    { id: 'cu_in', label: 'Pouces cubes', symbol: 'cu in', factor: 0.016387064, region: 'USA / UK', type: 'us', info: 'Moteurs (cylindrée), petites boîtes.' },
+                ]},
+            ],
+        },
+        {
+            id: 'sound', label: 'Son', placeholder: 'Ex : 100', defaults: ['db', 'bel'], allowNegative: true,
+            note: 'Conversion d\'unités de rapport (1 Bel = 10 dB). Ne convertit pas l\'intensité physique (W/m²).',
+            groups: [{ units: [
+                { id: 'db', label: 'Décibels', symbol: 'dB', factor: 1, region: 'Universel', type: 'sci', info: 'Niveau sonore, audio, acoustique.' },
+                { id: 'bel', label: 'Bels', symbol: 'B', factor: 10, region: 'Scientifique', type: 'sci', info: 'Unité d\'origine (peu utilisée seule).' },
+                { id: 'neper', label: 'Népers', symbol: 'Np', factor: 20 / Math.LN10, region: 'Scientifique', type: 'sci', info: 'Télécoms, théorie des circuits.' },
+            ]}],
+        },
+    ];
 
-        // Surface
-        km2: { region: "Monde (SI)", type: "si", info: "Géographie, villes, pays." },
-        ha: { region: "Monde (SI)", type: "si", info: "Agriculture, foresterie, terrains." },
-        m2: { region: "Monde (SI)", type: "si", info: "Immobilier, construction." },
-        dm2: { region: "Monde (SI)", type: "si", info: "Rare, usage scolaire." },
-        cm2: { region: "Monde (SI)", type: "si", info: "Petites surfaces, électronique." },
-        mm2: { region: "Monde (SI)", type: "si", info: "Précision technique, fils." },
-        ac: { region: "USA / UK", type: "us", info: "Immobilier, terres agricoles." },
-        sqmi: { region: "USA / UK", type: "us", info: "Géographie (états, parcs)." },
-        sqyd: { region: "USA / UK", type: "us", info: "Tapis, tissus, construction." },
-        sqft: { region: "USA / UK", type: "us", info: "Immobilier (USA), construction." },
-        sqin: { region: "USA / UK", type: "us", info: "Petites surfaces techniques." },
+    // ------------------------------------------------------------------
+    // OUTILS
+    // ------------------------------------------------------------------
+    const $ = id => document.getElementById(id);
+    const STORAGE_KEY = 'convertisseurMesures_v2';
 
-        // Volume
-        m3: { region: "Monde (SI)", type: "si", info: "Eau, gaz, construction." },
-        l: { region: "Monde (SI)", type: "si", info: "Liquides courants, carburant." },
-        ml: { region: "Monde (SI)", type: "si", info: "Cuisine, médicaments." },
-        cl: { region: "Europe", type: "si", info: "Boissons, cuisine en Europe." },
-        gal_us: { region: "USA", type: "us", info: "Carburant, liquides (plus petit que UK)." },
-        gal_uk: { region: "UK / Canada", type: "us", info: "Carburant, liquides (impérial)." },
-        pt_us: { region: "USA", type: "us", info: "Bières, liquides culinaires." },
-        pt_uk: { region: "UK", type: "us", info: "Bières (pinte de 568ml)." },
-        cup_us: { region: "USA", type: "us", info: "Recettes de cuisine américaines." },
-        fl_oz_us: { region: "USA", type: "us", info: "Boissons, cosmétiques." },
-        fl_oz_uk: { region: "UK", type: "us", info: "Liquides divers." },
-        cu_ft: { region: "USA / UK", type: "us", info: "Réfrigérateurs, gaz, déménagement." },
-        cu_in: { region: "USA / UK", type: "us", info: "Moteurs (cylindrée), petites boîtes." },
+    const categoryById = id => CATEGORIES.find(c => c.id === id);
+    const allUnits = cat => cat.groups.flatMap(g => g.units.map(u => Object.assign({ group: g }, u)));
+    const unitById = (cat, id) => allUnits(cat).find(u => u.id === id);
 
-        // Son
-        db: { region: "Universel", type: "sci", info: "Niveau sonore, audio, acoustique." },
-        bel: { region: "Scientifique", type: "sci", info: "Unité d'origine (peu utilisée seule)." },
-        neper: { region: "Scientifique", type: "sci", info: "Télécoms, théorie des circuits." }
-    };
-
-    const timeFactors = { ms: 0.001, s: 1, min: 60, h: 3600, d: 86400, w: 604800, mo: 2628000, y: 31536000 };
-    const lengthFactors = { km: 1000, m: 1, dm: 0.1, cm: 0.01, mm: 0.001, mi: 1609.344, yd: 0.9144, ft: 0.3048, in: 0.0254, nmi: 1852 };
-    const weightFactors = { t: 1000000, kg: 1000, g: 1, mg: 0.001, lb: 453.59237, oz: 28.349523125, st: 6350.29318 };
-    const speedFactors = { ms: 1, kmh: 1/3.6, mph: 0.44704, kn: 0.514444, fps: 0.3048 };
-    const areaFactors = { km2: 1000000, ha: 10000, m2: 1, dm2: 0.01, cm2: 0.0001, mm2: 0.000001, ac: 4046.8564224, sqmi: 2589988.110336, sqyd: 0.83612736, sqft: 0.09290304, sqin: 0.00064516 };
-    const volumeFactors = { m3: 1000, l: 1, ml: 0.001, cl: 0.01, gal_us: 3.785411784, gal_uk: 4.54609, pt_us: 0.473176473, pt_uk: 0.56826125, cup_us: 0.236588236, fl_oz_us: 0.029573529, fl_oz_uk: 0.028413062, cu_ft: 28.316846592, cu_in: 0.016387064 };
-    const soundFactors = { db: 1, bel: 10, neper: 8.68588963807 };
-
-    function switchCategory(category) {
-        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(category + '-section').classList.add('active');
-        
-        const map = { 'time': 0, 'length': 1, 'weight': 2, 'speed': 3, 'area': 4, 'volume': 5, 'sound': 6 };
-        if(map[category] !== undefined) document.querySelectorAll('.tab-btn')[map[category]].classList.add('active');
-
-        document.getElementById('result').textContent = "0";
-        const inputField = document.getElementById(category + '-input');
-        inputField.value = '';
-        inputField.focus();
-        
-        // Initialiser les infos pour les selects par défaut
-        updateInfo(category, 'from');
-        updateInfo(category, 'to');
+    // Nom de l'unité accordé au nombre (en français, pluriel à partir de 2)
+    function unitName(u, value) {
+        if (u.symbol) return u.symbol;
+        return Math.abs(value) >= 2 ? u.plural : u.word;
     }
 
-    function updateInfo(category, side) {
-        const unit = document.getElementById(category + '-' + side).value;
-        const data = unitContext[unit];
-        const badge = document.getElementById(`badge-${category}-${side}`);
-        const info = document.getElementById(`info-${category}-${side}`);
+    // Typographie française : espace insécable entre un nombre et son unité (« 32 °F » ne se coupe pas)
+    // (et avant « : », qui ne doit jamais commencer une ligne)
+    const nbspUnits = text => text.replace(/(\d) (?=[°a-zA-Zµ½])/g, '$1 ').replace(/ :/g, ' :');
 
-        if (data) {
-            badge.textContent = data.region;
-            badge.className = `region-badge badge-${data.type}`;
-            info.textContent = data.info;
-        }
+    function optionLabel(u) {
+        return u.symbol ? `${u.label} (${u.symbol})` : u.label;
     }
 
-    function convert(type) {
-        let input, from, to, factors;
-        const resultElement = document.getElementById('result');
-        const inputEl = document.getElementById(type + '-input');
-        const fromEl = document.getElementById(type + '-from');
-        const toEl = document.getElementById(type + '-to');
+    // Lecture d'un nombre saisi à la française : virgule ou point, espaces ignorés
+    function parseNumber(text) {
+        const s = text.trim().replace(/[\s  ]/g, '').replace(',', '.').replace(/−/g, '-');
+        if (s === '' || s === '-' || s === '+' || s === '.' || s === '-.') return null;   // saisie en cours : pas d'erreur
+        if (!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s)) return NaN;
+        return parseFloat(s);
+    }
 
-        if (!inputEl || !fromEl || !toEl) return;
-
-        input = parseFloat(inputEl.value);
-        from = fromEl.value;
-        to = toEl.value;
-
-        switch(type) {
-            case 'time': factors = timeFactors; break;
-            case 'length': factors = lengthFactors; break;
-            case 'weight': factors = weightFactors; break;
-            case 'speed': factors = speedFactors; break;
-            case 'area': factors = areaFactors; break;
-            case 'volume': factors = volumeFactors; break;
-            case 'sound': factors = soundFactors; break;
-            default: return;
+    // Affichage d'un nombre à la française : 1 609,344 ; très grand/petit : 3,171 × 10⁻¹¹
+    const SUPERSCRIPT = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+    function formatNumber(x) {
+        if (!isFinite(x)) return '—';
+        if (x === 0) return '0';
+        const ax = Math.abs(x);
+        if (ax >= 1e12 || ax < 1e-6) {
+            const [mant, exp] = x.toExponential(5).split('e');
+            const m = parseFloat(mant).toLocaleString('fr-FR', { maximumFractionDigits: 5 });
+            const e = String(parseInt(exp, 10)).replace(/./g, c => SUPERSCRIPT[c] || c);
+            return `${m} × 10${e}`;
         }
+        return x.toLocaleString('fr-FR', { maximumSignificantDigits: 9 });
+    }
 
-        if (isNaN(input)) {
-            resultElement.textContent = "0";
+    // ------------------------------------------------------------------
+    // ÉTAT (mémorisé sur l'appareil : dernier onglet, unités et valeur de chaque catégorie)
+    // ------------------------------------------------------------------
+    let state = { cat: 'time', per: {} };
+
+    function loadState() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (saved && categoryById(saved.cat) && saved.per && typeof saved.per === 'object') state = saved;
+        } catch (e) { /* stockage indisponible : on garde l'état par défaut */ }
+    }
+
+    function saveState() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignoré */ }
+    }
+
+    function catState(cat) {
+        let s = state.per[cat.id];
+        if (!s || !unitById(cat, s.from) || !unitById(cat, s.to)) {
+            s = { value: (s && s.value) || '', from: cat.defaults[0], to: cat.defaults[1] };
+            state.per[cat.id] = s;
+        }
+        return s;
+    }
+
+    // ------------------------------------------------------------------
+    // AFFICHAGE
+    // ------------------------------------------------------------------
+    function buildTabs() {
+        const tabs = $('tabs');
+        CATEGORIES.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tab-btn';
+            btn.dataset.cat = cat.id;
+            btn.textContent = cat.label;
+            btn.addEventListener('click', () => switchCategory(cat.id));
+            tabs.appendChild(btn);
+        });
+    }
+
+    function fillSelect(select, cat) {
+        select.innerHTML = '';
+        cat.groups.forEach(group => {
+            const parent = group.name ? document.createElement('optgroup') : select;
+            if (group.name) parent.label = group.name;
+            group.units.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = optionLabel(u);
+                parent.appendChild(opt);
+            });
+            if (group.name) select.appendChild(parent);
+        });
+    }
+
+    function switchCategory(catId) {
+        const cat = categoryById(catId);
+        state.cat = catId;
+        const s = catState(cat);
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === catId));
+        fillSelect($('unit-from'), cat);
+        fillSelect($('unit-to'), cat);
+        $('unit-from').value = s.from;
+        $('unit-to').value = s.to;
+
+        // La valeur de chaque onglet est conservée ; pas de focus automatique (le clavier ne s'ouvre pas tout seul)
+        const input = $('value-input');
+        input.value = s.value;
+        input.placeholder = cat.placeholder;
+        input.parentElement.classList.toggle('has-sign', !!cat.allowNegative);
+
+        updateInfo('from');
+        updateInfo('to');
+        convert();
+        saveState();
+    }
+
+    function updateInfo(side) {
+        const cat = categoryById(state.cat);
+        const u = unitById(cat, $('unit-' + side).value);
+        const badge = $('badge-' + side);
+        badge.textContent = u.region;
+        badge.className = `region-badge badge-${u.type}`;
+        $('info-' + side).textContent = nbspUnits(u.info);
+    }
+
+    function updateNote(cat, from, to) {
+        const notes = [];
+        if (cat.note) notes.push(cat.note);
+        [from.group, to.group].forEach(g => { if (g.note && !notes.includes(g.note)) notes.push(g.note); });
+        const note = $('note');
+        note.textContent = nbspUnits(notes.join(' '));
+        note.hidden = notes.length === 0;
+    }
+
+    function convert() {
+        const cat = categoryById(state.cat);
+        const from = unitById(cat, $('unit-from').value);
+        const to = unitById(cat, $('unit-to').value);
+        const s = catState(cat);
+        s.value = $('value-input').value;
+        s.from = from.id;
+        s.to = to.id;
+
+        updateNote(cat, from, to);
+        $('clear-btn').classList.toggle('visible', s.value !== '');
+
+        const value = parseNumber(s.value);
+        const resultEl = $('result'), eqEl = $('result-equation'), sideEl = $('result-side'), errEl = $('input-error');
+        const copyBtn = $('copy-btn');
+
+        if (value === null || Number.isNaN(value)) {
+            resultEl.textContent = '0';
+            eqEl.textContent = '';
+            sideEl.textContent = '';
+            errEl.textContent = Number.isNaN(value) ? 'Nombre non valide (ex. : 12,5)' : '';
+            copyBtn.disabled = true;
             return;
         }
-
-        const baseValue = input * factors[from];
-        const finalValue = baseValue / factors[to];
-
-        let displayValue;
-        // 1. Calcul du nombre principal
-        if (finalValue === 0) displayValue = 0;
-        else if (type === 'sound') displayValue = parseFloat(finalValue.toFixed(4));
-        else if (Math.abs(finalValue) < 0.000001 || Math.abs(finalValue) > 10000000) displayValue = finalValue.toExponential(4);
-        else if (Number.isInteger(finalValue)) displayValue = finalValue;
-        else displayValue = parseFloat(finalValue.toFixed(6));
-
-        // 2. Gestion de l'affichage de l'unité
-        let unitLabel = "";
-        let sideInfo = "";
-
-        // Récupération du symbole de l'unité (ex: "m²" depuis "Mètres carrés (m²)")
-        const selectedOption = toEl.options[toEl.selectedIndex].text;
-        const match = selectedOption.match(/\(([^)]+)\)/);
-        const symbol = (match && match[1]) ? match[1] : selectedOption;
-
-        if (type === 'area') {
-            // --- UNIQUEMENT POUR LES SURFACES ---
-            unitLabel = " " + symbol;
-            
-            if (finalValue >= 0) {
-                const sideLength = Math.sqrt(finalValue);
-                let sideDisplay;
-                
-                // Formatage intelligent du côté
-                if (Number.isInteger(sideLength)) {
-                    sideDisplay = sideLength;
-                } else {
-                    sideDisplay = parseFloat(sideLength.toFixed(4));
-                }
-
-                // Nettoyer l'unité pour avoir la longueur (enlever le ² ou le 2)
-                // Ex: m² -> m, km2 -> km, sqft -> ft (si on avait codé ainsi, mais ici c'est géré par le symbole)
-                let linearUnit = symbol.replace(/²/g, "").replace(/2/g, "").trim();
-                
-                // Cas spécifique pour les acres ou autres si le symbole ne se nettoie pas bien
-                // Mais avec vos options (m², km², etc.), le replace suffit.
-                
-                sideInfo = ` (côté : ${sideDisplay} ${linearUnit})`;
-            }
-        } else {
-            // Pour les autres catégories (dont Volume), on affiche juste la valeur et l'unité
-            if (match && match[1]) {
-                unitLabel = " " + match[1];
-            }
+        // Températures (formules) ou unités proportionnelles (coefficients)
+        const base = from.toBase ? from.toBase(value) : value * from.factor;
+        if (from.toBase && base < -1e-9) {
+            resultEl.textContent = '—';
+            eqEl.textContent = '';
+            sideEl.textContent = '';
+            errEl.textContent = 'Impossible : en dessous du zéro absolu (−273,15 °C).';
+            copyBtn.disabled = true;
+            return;
         }
+        errEl.textContent = '';
 
-        // 3. Affichage final
-        resultElement.textContent = displayValue + unitLabel + sideInfo;
+        const result = to.fromBase ? to.fromBase(base) : base / to.factor;
+        const resultText = `${formatNumber(result)}\u00a0${unitName(to, result)}`;
+        resultEl.textContent = resultText;
+        eqEl.textContent = `${formatNumber(value)}\u00a0${unitName(from, value)} = ${resultText}`;
+        copyBtn.disabled = false;
+
+        // Surfaces : côté du carré équivalent, dans l'unité de longueur correspondante
+        if (to.side && result >= 0) {
+            const [symbol, metres] = to.side;
+            const sideLength = Math.sqrt(result * to.factor) / metres;
+            sideEl.textContent = `Carré de ${formatNumber(sideLength)}\u00a0${symbol} de côté`;
+        } else {
+            sideEl.textContent = '';
+        }
     }
 
-    // Initialisation au chargement
-    window.onload = function() {
-        updateInfo('time', 'from');
-        updateInfo('time', 'to');
-        // Mettre à jour les autres catégories cachées pour quand on cliquera dessus
-        ['length', 'weight', 'speed', 'area', 'volume', 'sound'].forEach(cat => {
-            // On ne le fait pas visiblement, mais la fonction est prête
+    // ------------------------------------------------------------------
+    // ÉVÉNEMENTS
+    // ------------------------------------------------------------------
+    function onUnitChange(side) {
+        updateInfo(side);
+        convert();
+        saveState();
+    }
+
+    function swapUnits() {
+        const a = $('unit-from').value;
+        $('unit-from').value = $('unit-to').value;
+        $('unit-to').value = a;
+        updateInfo('from');
+        updateInfo('to');
+        convert();
+        saveState();
+    }
+
+    async function copyResult() {
+        const btn = $('copy-btn');
+        const text = $('result').textContent;
+        let ok = false;
+        try {
+            await navigator.clipboard.writeText(text);
+            ok = true;
+        } catch (e) {
+            // Solution de secours (anciens navigateurs, page ouverte en fichier local)
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+            document.body.removeChild(ta);
+        }
+        btn.textContent = ok ? 'Copié ✔' : 'Échec';
+        setTimeout(() => { btn.textContent = 'Copier'; }, 1500);
+    }
+
+    function init() {
+        loadState();
+        buildTabs();
+
+        const input = $('value-input');
+        input.addEventListener('input', () => { convert(); saveState(); });
+        // Touche « OK / Entrée » du téléphone : ferme le clavier
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+
+        $('clear-btn').addEventListener('click', () => {
+            input.value = '';
+            convert();
+            saveState();
+            input.focus();
         });
-    };
+        // ± : ajoute ou retire le signe moins, sans fermer le clavier
+        const signBtn = $('sign-btn');
+        signBtn.addEventListener('pointerdown', e => e.preventDefault());
+        signBtn.addEventListener('click', () => {
+            const v = input.value.trim();
+            input.value = /^[-−]/.test(v) ? v.slice(1) : '-' + v;
+            convert();
+            saveState();
+        });
+
+        $('unit-from').addEventListener('change', () => onUnitChange('from'));
+        $('unit-to').addEventListener('change', () => onUnitChange('to'));
+        $('swap-btn').addEventListener('click', swapUnits);
+        $('copy-btn').addEventListener('click', copyResult);
+
+        switchCategory(state.cat);
+    }
+
+    init();
 </script>
 
 </body>
